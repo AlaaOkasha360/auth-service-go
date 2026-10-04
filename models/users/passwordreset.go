@@ -1,6 +1,10 @@
-package models
+package users
 
-import "time"
+import (
+	"time"
+
+	"github.com/AlaaOkasha360/auth-service-go/config"
+)
 
 type PasswordReset struct{
 	ID uint `gorm:"primaryKey"`
@@ -8,4 +12,8 @@ type PasswordReset struct{
 	Token string `gorm:"uniqueIndex;not null"`
 	OTP uint `gorm:"not null"`
 	ExpiresAt time.Time `gorm:"not null"`
+}
+
+func PasswordresetMigrate(){
+	config.DB.AutoMigrate(&PasswordReset{})
 }

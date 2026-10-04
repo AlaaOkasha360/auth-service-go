@@ -3,7 +3,7 @@ package middlewares
 import (
 	"net/http"
 
-	"github.com/AlaaOkasha360/auth-service-go/models"
+	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +16,7 @@ func UserMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		user, ok := currentUser.(models.User)
+		user, ok := currentUser.(users.User)
 
 		if user.Role != "user" || !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)

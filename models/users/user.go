@@ -1,6 +1,9 @@
-package models
+package users
 
-import "gorm.io/gorm"
+import (
+	"github.com/AlaaOkasha360/auth-service-go/config"
+	"gorm.io/gorm"
+)
 
 type User struct{
 	gorm.Model
@@ -10,4 +13,8 @@ type User struct{
 	Password string `gorm:"not null" json:"-"`
 	Role string `gorm:"type:varchar(20);default:'user'" json:"role"`
 	
+}
+
+func UserMigrate(){
+	config.DB.AutoMigrate(&User{})
 }

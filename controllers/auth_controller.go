@@ -10,7 +10,7 @@ import (
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/helpers"
-	"github.com/AlaaOkasha360/auth-service-go/models"
+	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/AlaaOkasha360/auth-service-go/requests"
 	"github.com/AlaaOkasha360/auth-service-go/responses"
 	"github.com/gin-gonic/gin"
@@ -31,7 +31,7 @@ func Register(ctx *gin.Context) {
 		responses.Error(ctx, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
-	user := models.User{
+	user := users.User{
 		Name:     input.Name,
 		Email:    input.Email,
 		Password: string(hashedPassword),
@@ -56,7 +56,7 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	var user models.User
+	var user users.User
 
 	result := config.DB.Where("email = ?", input.Email).First(&user)
 
@@ -90,7 +90,7 @@ func ForgotPassword(ctx *gin.Context) {
 		return
 	}
 
-	var user models.User
+	var user users.User
 
 	err := config.DB.Where("email = ?", input.Email).First(&user).Error
 
@@ -115,8 +115,8 @@ func ForgotPassword(ctx *gin.Context) {
 	otpCode := uint(otp.Int64() + 100000)
 
 	expiresAt := time.Now().Add(15 * time.Minute)
-	config.DB.Where("email = ?", input.Email).Delete(&models.PasswordReset{})
-	resetpassword := models.PasswordReset{
+	config.DB.Where("email = ?", input.Email).Delete(&users.PasswordReset{})
+	resetpassword := users.PasswordReset{
 		Email:     input.Email,
 		Token:     token,
 		OTP:       otpCode,
@@ -140,7 +140,7 @@ func ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	var passwordReset models.PasswordReset
+	var passwordReset users.PasswordReset
 
 	err := config.DB.Where("token = ?", input.Token).First(&passwordReset).Error
 
@@ -168,7 +168,7 @@ func ResetPassword(ctx *gin.Context) {
 	}
 
 	err = config.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", string(hashedPassword)).Error; err != nil {
+		if err := tx.Model(&users.User{}).Where("email = ?", passwordReset.Email).Update("password", string(hashedPassword)).Error; err != nil {
 			return err
 		}
 		if err := tx.Delete(&passwordReset).Error; err != nil {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/helpers"
-	"github.com/AlaaOkasha360/auth-service-go/models"
+	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/AlaaOkasha360/auth-service-go/requests"
 	"github.com/AlaaOkasha360/auth-service-go/responses"
 	"github.com/gin-gonic/gin"
@@ -19,7 +19,7 @@ func GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	user, ok := userValue.(models.User)
+	user, ok := userValue.(users.User)
 
 	if !ok {
 		responses.Error(ctx, http.StatusBadRequest, "failed to assert user")
@@ -36,7 +36,7 @@ func UpdateProfile(ctx *gin.Context) {
 		return
 	}
 
-	user := userValue.(models.User)
+	user := userValue.(users.User)
 	var input requests.UpdateProfile
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {

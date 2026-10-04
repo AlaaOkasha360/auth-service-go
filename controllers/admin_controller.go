@@ -5,13 +5,13 @@ import (
 	"strconv"
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
-	"github.com/AlaaOkasha360/auth-service-go/models"
+	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/AlaaOkasha360/auth-service-go/responses"
 	"github.com/gin-gonic/gin"
 )
 
 func GetAllUsers(ctx *gin.Context) {
-	var users []models.User
+	var users_ []users.User
 	var page = ctx.DefaultQuery("page", "1")
 	var limit = ctx.DefaultQuery("limit", "10")
 
@@ -28,12 +28,12 @@ func GetAllUsers(ctx *gin.Context) {
 
 	offset := (pageNum - 1) * limitNum
 
-	query := config.DB.Model(&models.User{})
+	query := config.DB.Model(&users.User{})
 
 	var total int64
 	query.Count(&total)
 
-	result := query.Order("created_at DESC").Offset(offset).Limit(limitNum).Find(&users)
+	result := query.Order("created_at DESC").Offset(offset).Limit(limitNum).Find(&users_)
 
 	if result.Error != nil {
 		responses.Error(ctx, http.StatusInternalServerError, "Failed to fetch users")
@@ -47,7 +47,7 @@ func GetAllUsers(ctx *gin.Context) {
 		"total_pages": (total + int64(limitNum) - 1) / int64(limitNum),
 	}
 
-	responses.JSON(ctx, http.StatusOK, "users fetched successfully", users, paginationData)
+	responses.JSON(ctx, http.StatusOK, "users fetched successfully", users_, paginationData)
 
 }
 
@@ -58,7 +58,7 @@ func DeleteUser(ctx *gin.Context) {
 		return
 	}
 
-	var user models.User
+	var user users.User
 
 	if result := config.DB.First(&user, userId); result.Error != nil {
 		responses.Error(ctx, http.StatusNotFound, "user not found")

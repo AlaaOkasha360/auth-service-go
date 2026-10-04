@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
-	"github.com/AlaaOkasha360/auth-service-go/models"
+	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -45,7 +45,7 @@ func AuthMiddleware() gin.HandlerFunc{
 			return
 		}
 
-		var user models.User
+		var user users.User
 		userEmail := claims["email"]
 
 		if err := config.DB.Where("email = ?", userEmail).First(&user).Error; err!=nil{
