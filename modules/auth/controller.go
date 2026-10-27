@@ -41,7 +41,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	responses.JSON(ctx, http.StatusCreated, "user created successfully", user, nil)
+	responses.JSON(ctx, http.StatusCreated, "user created successfully", users.ToUserResponse(user), nil)
 
 }
 

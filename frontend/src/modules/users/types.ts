@@ -1,14 +1,12 @@
 import type { Role } from '@/modules/auth'
 
-// The handlers return users.User, which embeds gorm.Model without json tags, so those fields are PascalCase.
+// Mirrors UserResponse in modules/users/responses.go.
 export interface User {
-  ID: number
-  CreatedAt: string
-  UpdatedAt: string
-  DeletedAt: string | null
+  id: number
   name: string
   email: string
   role: Role
+  created_at: string
 }
 
 // Mirrors modules/users/requests.go.

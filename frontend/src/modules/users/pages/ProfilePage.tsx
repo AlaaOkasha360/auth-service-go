@@ -85,11 +85,11 @@ function ProfileContent({ user }: { user: User }) {
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">Member since</dt>
-            <dd>{formatDate(user.CreatedAt)}</dd>
+            <dd>{formatDate(user.created_at)}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">User ID</dt>
-            <dd className="font-mono">{user.ID}</dd>
+            <dd className="font-mono">{user.id}</dd>
           </div>
         </dl>
       </section>

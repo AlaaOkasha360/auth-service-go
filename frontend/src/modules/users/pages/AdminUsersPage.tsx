@@ -25,7 +25,7 @@ export function AdminUsersPage() {
   })
 
   const remove = useMutation({
-    mutationFn: (u: User) => deleteUser(u.ID),
+    mutationFn: (u: User) => deleteUser(u.id),
     onSuccess: () => {
       // Deleting the last user on a page would leave it empty; step back one page.
       if (data?.users.length === 1 && page > 1) setPage((p) => p - 1)
@@ -75,10 +75,10 @@ export function AdminUsersPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {users.map((u) => {
-              const isSelf = u.ID === session?.userId
+              const isSelf = u.id === session?.userId
               return (
-                <tr key={u.ID} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-slate-500">{u.ID}</td>
+                <tr key={u.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-slate-500">{u.id}</td>
                   <td className="px-4 py-3 font-medium">
                     {u.name}
                     {isSelf && <span className="ml-2 text-xs text-slate-400">(you)</span>}
@@ -87,7 +87,7 @@ export function AdminUsersPage() {
                   <td className="px-4 py-3">
                     <RoleBadge role={u.role} />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(u.CreatedAt)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(u.created_at)}</td>
                   <td className="px-4 py-3 text-right">
                     <Button
                       variant="danger"

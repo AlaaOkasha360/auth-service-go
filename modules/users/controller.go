@@ -17,7 +17,7 @@ func GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	responses.JSON(ctx, http.StatusOK, "User profile retrieved successfully", user, nil)
+	responses.JSON(ctx, http.StatusOK, "User profile retrieved successfully", ToUserResponse(user), nil)
 }
 
 func UpdateProfile(ctx *gin.Context) {
@@ -56,6 +56,6 @@ func UpdateProfile(ctx *gin.Context) {
 	}
 
 	user, _ = FindByID(user.ID)
-	responses.JSON(ctx, http.StatusOK, "updated successfully", user, nil)
+	responses.JSON(ctx, http.StatusOK, "updated successfully", ToUserResponse(user), nil)
 
 }

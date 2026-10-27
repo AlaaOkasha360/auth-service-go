@@ -28,7 +28,7 @@ func GetAllUsers(ctx *gin.Context) {
 
 	pagination := responses.NewPagination(query.Page, query.Limit, total)
 
-	responses.JSON(ctx, http.StatusOK, "users fetched successfully", users, pagination)
+	responses.JSON(ctx, http.StatusOK, "users fetched successfully", ToUserResponses(users), pagination)
 }
 
 func DeleteUser(ctx *gin.Context) {
