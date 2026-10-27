@@ -20,3 +20,7 @@ type ResetPassword struct{
 	OTP uint `json:"otp" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
+
+type RefreshTokenRequest struct{
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}

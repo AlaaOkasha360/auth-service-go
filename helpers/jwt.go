@@ -1,27 +1,79 @@
 package helpers
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	AccessTokenType  = "access"
+	RefreshTokenType = "refresh"
+
+	AccessTokenDuration  = 15*time.Minute
+	RefreshTokenDuration = 7*24*time.Hour
+)
+
+type Claims struct {
+	UserID uint   `json:"user_id"`
+	Type   string `json:"type"`
+	jwt.RegisteredClaims
+}
+
 func JWTSecret() []byte {
 	return []byte(os.Getenv("JWT_SECRET"))
 }
 
-func GenerateToken(email string) (string, error){
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, 
-	jwt.MapClaims{
-		"email": email,
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
-	})
+func GenerateAccessToken(userID uint) (string, error) {
+	return generateToken(userID, AccessTokenType, AccessTokenDuration)
+}
 
-	tokenString, err := token.SignedString(JWTSecret())
+func GenerateRefreshToken(userID uint) (string, error) {
+	return generateToken(userID, RefreshTokenType, RefreshTokenDuration)
+}
 
-	if err != nil{
-		return "", err
+func generateToken(userID uint, tokenType string, duration time.Duration) (string, error) {
+	now := time.Now()
+
+	claims := Claims{
+		UserID: userID,
+		Type:   tokenType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        rand.Text(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(duration)),
+		},
 	}
-	return tokenString, nil;
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString(JWTSecret())
+}
+
+func ParseToken(tokenString string, tokenType string) (*Claims, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
+		return JWTSecret(), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims.Type != tokenType {
+		return nil, errors.New("invalid token type")
+	}
+
+	return claims, nil
+}
+
+func HashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }

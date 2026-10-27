@@ -72,14 +72,97 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	token, err := helpers.GenerateToken(user.Email)
+	tokens, err := createTokens(user.ID)
 
 	if err != nil {
+		responses.Error(ctx, http.StatusInternalServerError, "Failed to create tokens")
+		return
+	}
+
+	responses.JSON(ctx, http.StatusOK, "Login successfully", tokens, nil)
+}
+
+func RefreshToken(ctx *gin.Context) {
+	var input requests.RefreshTokenRequest
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	responses.JSON(ctx, http.StatusOK, "Login successfully", token, nil)
+	claims, err := helpers.ParseToken(input.RefreshToken, helpers.RefreshTokenType)
+
+	if err != nil {
+		responses.Error(ctx, http.StatusUnauthorized, "Invalid refresh token")
+		return
+	}
+
+	var refreshToken users.RefreshToken
+
+	err = config.DB.Where("token = ? AND user_id = ?", helpers.HashToken(input.RefreshToken), claims.UserID).First(&refreshToken).Error
+
+	if err != nil || time.Now().After(refreshToken.ExpiresAt) {
+		responses.Error(ctx, http.StatusUnauthorized, "Invalid refresh token")
+		return
+	}
+
+	config.DB.Delete(&refreshToken)
+
+	var user users.User
+
+	if err := config.DB.First(&user, claims.UserID).Error; err != nil {
+		responses.Error(ctx, http.StatusUnauthorized, "user not found")
+		return
+	}
+
+	tokens, err := createTokens(user.ID)
+
+	if err != nil {
+		responses.Error(ctx, http.StatusInternalServerError, "Failed to create tokens")
+		return
+	}
+
+	responses.JSON(ctx, http.StatusOK, "Token refreshed successfully", tokens, nil)
+}
+
+func Logout(ctx *gin.Context) {
+	var input requests.RefreshTokenRequest
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		responses.Error(ctx, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	config.DB.Where("token = ?", helpers.HashToken(input.RefreshToken)).Delete(&users.RefreshToken{})
+
+	responses.JSON(ctx, http.StatusOK, "Logged out successfully", nil, nil)
+}
+
+func createTokens(userID uint) (responses.TokenResponse, error) {
+	accessToken, err := helpers.GenerateAccessToken(userID)
+	if err != nil {
+		return responses.TokenResponse{}, err
+	}
+
+	refreshToken, err := helpers.GenerateRefreshToken(userID)
+	if err != nil {
+		return responses.TokenResponse{}, err
+	}
+
+	savedToken := users.RefreshToken{
+		UserID:    userID,
+		Token:     helpers.HashToken(refreshToken),
+		ExpiresAt: time.Now().Add(helpers.RefreshTokenDuration),
+	}
+
+	if err := config.DB.Create(&savedToken).Error; err != nil {
+		return responses.TokenResponse{}, err
+	}
+
+	return responses.TokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func ForgotPassword(ctx *gin.Context) {
