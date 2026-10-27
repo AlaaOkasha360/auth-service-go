@@ -21,6 +21,7 @@ const (
 
 type Claims struct {
 	UserID uint   `json:"user_id"`
+	Role   string `json:"role,omitempty"`
 	Type   string `json:"type"`
 	jwt.RegisteredClaims
 }
@@ -29,19 +30,20 @@ func JWTSecret() []byte {
 	return []byte(os.Getenv("JWT_SECRET"))
 }
 
-func GenerateAccessToken(userID uint) (string, error) {
-	return generateToken(userID, AccessTokenType, AccessTokenDuration)
+func GenerateAccessToken(userID uint, role string) (string, error) {
+	return generateToken(userID, role, AccessTokenType, AccessTokenDuration)
 }
 
 func GenerateRefreshToken(userID uint) (string, error) {
-	return generateToken(userID, RefreshTokenType, RefreshTokenDuration)
+	return generateToken(userID, "", RefreshTokenType, RefreshTokenDuration)
 }
 
-func generateToken(userID uint, tokenType string, duration time.Duration) (string, error) {
+func generateToken(userID uint, role string, tokenType string, duration time.Duration) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
 		UserID: userID,
+		Role:   role,
 		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        rand.Text(),

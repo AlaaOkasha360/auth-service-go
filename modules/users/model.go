@@ -5,6 +5,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	RoleUser  = "user"
+	RoleAdmin = "admin"
+)
+
 type User struct{
 	gorm.Model
 
@@ -15,6 +20,6 @@ type User struct{
 	
 }
 
-func UserMigrate(){
+func Migrate(){
 	config.DB.AutoMigrate(&User{})
 }

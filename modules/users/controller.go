@@ -1,28 +1,19 @@
-package controllers
+package users
 
 import (
 	"net/http"
 
-	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/helpers"
-	"github.com/AlaaOkasha360/auth-service-go/models/users"
-	"github.com/AlaaOkasha360/auth-service-go/requests"
+	"github.com/AlaaOkasha360/auth-service-go/middlewares"
 	"github.com/AlaaOkasha360/auth-service-go/responses"
 	"github.com/gin-gonic/gin"
 )
 
 func GetProfile(ctx *gin.Context) {
-	userValue, ok := ctx.Get("currentUser")
+	user, err := FindByID(ctx.GetUint(middlewares.UserIDKey))
 
-	if !ok {
-		responses.Error(ctx, http.StatusBadRequest, "unable to get the user")
-		return
-	}
-
-	user, ok := userValue.(users.User)
-
-	if !ok {
-		responses.Error(ctx, http.StatusBadRequest, "failed to assert user")
+	if err != nil {
+		responses.Error(ctx, http.StatusNotFound, "user not found")
 		return
 	}
 
@@ -30,14 +21,14 @@ func GetProfile(ctx *gin.Context) {
 }
 
 func UpdateProfile(ctx *gin.Context) {
-	userValue, ok := ctx.Get("currentUser")
-	if !ok {
-		responses.Error(ctx, http.StatusBadRequest, "assertion failed")
+	user, err := FindByID(ctx.GetUint(middlewares.UserIDKey))
+
+	if err != nil {
+		responses.Error(ctx, http.StatusNotFound, "user not found")
 		return
 	}
 
-	user := userValue.(users.User)
-	var input requests.UpdateProfile
+	var input UpdateProfileRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
@@ -59,12 +50,12 @@ func UpdateProfile(ctx *gin.Context) {
 		updates["password"] = hashPassword
 	}
 
-	result := config.DB.Model(user).Updates(updates)
-	if result.Error != nil {
+	if err := Update(&user, updates); err != nil {
 		responses.Error(ctx, http.StatusInternalServerError, "update failed")
 		return
 	}
-	config.DB.First(&user, user.ID)
+
+	user, _ = FindByID(user.ID)
 	responses.JSON(ctx, http.StatusOK, "updated successfully", user, nil)
 
 }

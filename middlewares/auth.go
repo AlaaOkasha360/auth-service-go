@@ -4,10 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/helpers"
-	"github.com/AlaaOkasha360/auth-service-go/models/users"
 	"github.com/gin-gonic/gin"
+)
+
+const (
+	UserIDKey = "userID"
+	RoleKey   = "role"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -26,12 +29,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		var user users.User
-		if err := config.DB.First(&user, claims.UserID).Error; err != nil {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		ctx.Set("currentUser", user)
+		ctx.Set(UserIDKey, claims.UserID)
+		ctx.Set(RoleKey, claims.Role)
 
 		ctx.Next()
 	}

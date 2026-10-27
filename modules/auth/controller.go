@@ -1,4 +1,4 @@
-package controllers
+package auth
 
 import (
 	"crypto/rand"
@@ -10,22 +10,21 @@ import (
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/helpers"
-	"github.com/AlaaOkasha360/auth-service-go/models/users"
-	"github.com/AlaaOkasha360/auth-service-go/requests"
+	"github.com/AlaaOkasha360/auth-service-go/modules/users"
 	"github.com/AlaaOkasha360/auth-service-go/responses"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 func Register(ctx *gin.Context) {
-	var input requests.RegisterRequest
+	var input RegisterRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	hashedPassword, err := helpers.EncryptPassword(input.Passowrd)
+	hashedPassword, err := helpers.EncryptPassword(input.Password)
 
 	if err != nil {
 		responses.Error(ctx, http.StatusInternalServerError, "Failed to process password")
@@ -34,12 +33,10 @@ func Register(ctx *gin.Context) {
 	user := users.User{
 		Name:     input.Name,
 		Email:    input.Email,
-		Password: string(hashedPassword),
+		Password: hashedPassword,
 	}
 
-	result := config.DB.Create(&user)
-
-	if result.Error != nil {
+	if err := users.Create(&user); err != nil {
 		responses.Error(ctx, http.StatusConflict, "Email already exists")
 		return
 	}
@@ -49,30 +46,26 @@ func Register(ctx *gin.Context) {
 }
 
 func Login(ctx *gin.Context) {
-	var input requests.LoginRequest
+	var input LoginRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	var user users.User
+	user, err := users.FindByEmail(input.Email)
 
-	result := config.DB.Where("email = ?", input.Email).First(&user)
-
-	if result.Error != nil {
+	if err != nil {
 		responses.Error(ctx, http.StatusNotFound, "user not found")
 		return
 	}
 
-	validatePassword := helpers.ComparePassword(input.Password, user.Password)
-
-	if validatePassword != true {
+	if !helpers.ComparePassword(input.Password, user.Password) {
 		responses.Error(ctx, http.StatusBadRequest, "Invalid password")
 		return
 	}
 
-	tokens, err := createTokens(user.ID)
+	tokens, err := createTokens(user)
 
 	if err != nil {
 		responses.Error(ctx, http.StatusInternalServerError, "Failed to create tokens")
@@ -82,8 +75,8 @@ func Login(ctx *gin.Context) {
 	responses.JSON(ctx, http.StatusOK, "Login successfully", tokens, nil)
 }
 
-func RefreshToken(ctx *gin.Context) {
-	var input requests.RefreshTokenRequest
+func Refresh(ctx *gin.Context) {
+	var input RefreshTokenRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
@@ -97,7 +90,7 @@ func RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	var refreshToken users.RefreshToken
+	var refreshToken RefreshToken
 
 	err = config.DB.Where("token = ? AND user_id = ?", helpers.HashToken(input.RefreshToken), claims.UserID).First(&refreshToken).Error
 
@@ -108,14 +101,14 @@ func RefreshToken(ctx *gin.Context) {
 
 	config.DB.Delete(&refreshToken)
 
-	var user users.User
+	user, err := users.FindByID(claims.UserID)
 
-	if err := config.DB.First(&user, claims.UserID).Error; err != nil {
+	if err != nil {
 		responses.Error(ctx, http.StatusUnauthorized, "user not found")
 		return
 	}
 
-	tokens, err := createTokens(user.ID)
+	tokens, err := createTokens(user)
 
 	if err != nil {
 		responses.Error(ctx, http.StatusInternalServerError, "Failed to create tokens")
@@ -126,58 +119,27 @@ func RefreshToken(ctx *gin.Context) {
 }
 
 func Logout(ctx *gin.Context) {
-	var input requests.RefreshTokenRequest
+	var input RefreshTokenRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	config.DB.Where("token = ?", helpers.HashToken(input.RefreshToken)).Delete(&users.RefreshToken{})
+	config.DB.Where("token = ?", helpers.HashToken(input.RefreshToken)).Delete(&RefreshToken{})
 
 	responses.JSON(ctx, http.StatusOK, "Logged out successfully", nil, nil)
 }
 
-func createTokens(userID uint) (responses.TokenResponse, error) {
-	accessToken, err := helpers.GenerateAccessToken(userID)
-	if err != nil {
-		return responses.TokenResponse{}, err
-	}
-
-	refreshToken, err := helpers.GenerateRefreshToken(userID)
-	if err != nil {
-		return responses.TokenResponse{}, err
-	}
-
-	savedToken := users.RefreshToken{
-		UserID:    userID,
-		Token:     helpers.HashToken(refreshToken),
-		ExpiresAt: time.Now().Add(helpers.RefreshTokenDuration),
-	}
-
-	if err := config.DB.Create(&savedToken).Error; err != nil {
-		return responses.TokenResponse{}, err
-	}
-
-	return responses.TokenResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
-}
-
 func ForgotPassword(ctx *gin.Context) {
-	var input requests.ForgotPassword
+	var input ForgotPasswordRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, "Invalid data")
 		return
 	}
 
-	var user users.User
-
-	err := config.DB.Where("email = ?", input.Email).First(&user).Error
-
-	if err != nil {
+	if _, err := users.FindByEmail(input.Email); err != nil {
 		responses.JSON(ctx, http.StatusOK, "If email exists a code will be sent to you!", nil, nil)
 		return
 	}
@@ -198,8 +160,8 @@ func ForgotPassword(ctx *gin.Context) {
 	otpCode := uint(otp.Int64() + 100000)
 
 	expiresAt := time.Now().Add(15 * time.Minute)
-	config.DB.Where("email = ?", input.Email).Delete(&users.PasswordReset{})
-	resetpassword := users.PasswordReset{
+	config.DB.Where("email = ?", input.Email).Delete(&PasswordReset{})
+	resetpassword := PasswordReset{
 		Email:     input.Email,
 		Token:     token,
 		OTP:       otpCode,
@@ -216,14 +178,14 @@ func ForgotPassword(ctx *gin.Context) {
 }
 
 func ResetPassword(ctx *gin.Context) {
-	var input requests.ResetPassword
+	var input ResetPasswordRequest
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		responses.Error(ctx, http.StatusBadRequest, "Invalid data")
 		return
 	}
 
-	var passwordReset users.PasswordReset
+	var passwordReset PasswordReset
 
 	err := config.DB.Where("token = ?", input.Token).First(&passwordReset).Error
 
@@ -251,13 +213,10 @@ func ResetPassword(ctx *gin.Context) {
 	}
 
 	err = config.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&users.User{}).Where("email = ?", passwordReset.Email).Update("password", string(hashedPassword)).Error; err != nil {
+		if err := users.UpdatePassword(tx, passwordReset.Email, hashedPassword); err != nil {
 			return err
 		}
-		if err := tx.Delete(&passwordReset).Error; err != nil {
-			return err
-		}
-		return nil
+		return tx.Delete(&passwordReset).Error
 	})
 
 	if err != nil {

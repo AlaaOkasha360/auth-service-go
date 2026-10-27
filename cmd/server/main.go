@@ -6,7 +6,8 @@ import (
 
 	"github.com/AlaaOkasha360/auth-service-go/config"
 	"github.com/AlaaOkasha360/auth-service-go/middlewares"
-	"github.com/AlaaOkasha360/auth-service-go/models/users"
+	"github.com/AlaaOkasha360/auth-service-go/modules/auth"
+	"github.com/AlaaOkasha360/auth-service-go/modules/users"
 	"github.com/AlaaOkasha360/auth-service-go/routes"
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,8 @@ func main(){
 		log.Fatal("JWT_SECRET is not set")
 	}
 
-	users.MigrateAllTables()
+	users.Migrate()
+	auth.Migrate()
 
 	router := gin.Default()
 
