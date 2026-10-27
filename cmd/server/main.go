@@ -12,7 +12,7 @@ import (
 )
 
 func main(){
-	
+	config.LoadEnvVariables()
 	config.DatabaseConnection()
 
 	if os.Getenv("JWT_SECRET") == "" {

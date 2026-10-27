@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/abdalzizmahmoud2511/go-validation v0.0.0-20260910072937-3c29c08abb0b // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.2 // indirect
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
